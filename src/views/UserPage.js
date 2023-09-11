@@ -50,7 +50,6 @@ export default function UserPage() {
     if (!isArrayEmpty(user.tipvote.upvote)) {
       const votedTips = user.tipvote.upvote.map(async (tipid) => {
         const tip = await getDoc(doc(db, "tips", tipid));
-        console.log('heres: ' + JSON.stringify(tip.data()))
         return({id: tip.id, ...tip.data()});
       });
       
@@ -92,7 +91,6 @@ export default function UserPage() {
   }, [loading, user]);
 
   const TipsRow = ({tips}) => {
-    console.log(JSON.stringify(tips) + " _ " + !isArrayEmpty(tips));
     let newTips = [];
     if (!isArrayEmpty(tips)) {
       newTips = tips.sort((a, b) => {
@@ -110,7 +108,6 @@ export default function UserPage() {
 
   const QuestionRow = ({questions}) => {
     let newQuestions = [];
-    console.log(JSON.stringify(questions) + " _ " + !isArrayEmpty(questions));
     if (!isArrayEmpty(questions)) {
       newQuestions = questions.sort((a, b) => {
         let voteA = a.upvote - a.downvote;

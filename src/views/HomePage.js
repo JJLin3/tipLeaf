@@ -91,8 +91,6 @@ export default function HomePage() {
 
     newTitle = tiptitle.filter((item) => (item).toLowerCase().includes(searchTip.toLowerCase()));
 
-    console.log('here: '  + JSON.stringify(newTitle) + '\n\n' + JSON.stringify(tiptitle) + "  _  " + searchTip)
-
     const q = await getDocs(
       query(collection(db, "tips"), where("title", "in", newTitle))
     );

@@ -213,16 +213,6 @@ export default function QuestionPage() {
     }
   };
 
-  console.log(
-    JSON.stringify(initansvote) +
-      "\n\n" +
-      JSON.stringify(ansvoteStatus) +
-      "\n\n" +
-      JSON.stringify(answers) +
-      "\n\n" +
-      JSON.stringify(userAnsVoteArray)
-  );
-
   const handleDownvote = async (e) => {
     // toggle and send the like status to the db
     let counter = downvote;
@@ -301,7 +291,6 @@ export default function QuestionPage() {
     let status = [...answerStatus];
     status[index] = !answerStatus[index];
     setAnswerStatus(status);
-    console.log(ans);
 
     if (status[index] === false) {
       await updateDoc(doc(db, "qna", id, "answers", ans.id), {
@@ -364,7 +353,6 @@ export default function QuestionPage() {
     let upvoteArray = userAnsVoteArray.upvote;
     let downvoteArray = userAnsVoteArray.downvote;
 
-    console.log(JSON.stringify(upvoteArray))
 
     if (user) {
       if (!ansvoteStatus[index].downvoteStatus) {
@@ -407,7 +395,6 @@ export default function QuestionPage() {
     let upvoteArray = userAnsVoteArray.upvote;
     let downvoteArray = userAnsVoteArray.downvote;
 
-    console.log(JSON.stringify(upvoteArray))
 
     if (user) {
       if (!ansvoteStatus[index].upvoteStatus) {
