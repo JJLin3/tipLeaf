@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import NavBar from "../components/NavBar";
-import img from '../assets/background3.jpg'
+import img from "../assets/background3.jpg";
 
 export default function TipPageDetails() {
   const [userId, setUserId] = useState("");
@@ -35,8 +35,8 @@ export default function TipPageDetails() {
   const id = params.tid;
   const [user, loading] = useAuthState(auth);
   const navigate = useNavigate();
-  const [initialUpvote, setInitalUpvote] = useState(0);
-  const [initialDownvote, setInitalDownvote] = useState(0);
+  const [initialUpvote, setInitialUpvote] = useState(0);
+  const [initialDownvote, setInitialDownvote] = useState(0);
   const [editsavestatus, setEditSaveStatus] = useState(false);
 
   async function getTip(id, user) {
@@ -48,8 +48,8 @@ export default function TipPageDetails() {
     setLastAuthoredOn(tip.lastauthoredon.toDate().toLocaleString());
     setUpvote(tip.upvote);
     setDownvote(tip.downvote);
-    setInitalUpvote(tip.upvote);
-    setInitalDownvote(tip.downvote);
+    setInitialUpvote(tip.upvote);
+    setInitialDownvote(tip.downvote);
 
     if (user) {
       // if user is login, retrieve the user info from the db whcih contain user email and array of postId which the user like
@@ -73,11 +73,11 @@ export default function TipPageDetails() {
           if (item.tipvote.upvote.includes(id)) {
             setUpvoteStatus(true);
             setDownvoteStatus(false);
-            setInitalUpvote(upvote - 1);
+            setInitialUpvote(tip.upvote - 1);
           } else if (item.tipvote.downvote.includes(id)) {
             setUpvoteStatus(false);
             setDownvoteStatus(true);
-            setInitalDownvote(downvote - 1);
+            setInitialDownvote(tip.downvote - 1);
           } else {
             setUpvoteStatus(false);
             setDownvoteStatus(false);
@@ -88,11 +88,9 @@ export default function TipPageDetails() {
   }
 
   const handleUpvote = async (e) => {
-    // toggle and send the like status to the db
     let counter = upvote;
     let downvoteArray = vote.downvote;
     let upvoteArray = vote.upvote;
-    //const docRef = doc(db, "tips", id);
 
     if (user) {
       if (!upvoteStatus) {
@@ -111,10 +109,13 @@ export default function TipPageDetails() {
         upvote: upvoteArray,
       }));
       setUpvoteStatus(!upvoteStatus);
-      await updateDoc(doc(db, "tips", id), { upvote: counter });
+      await updateDoc(doc(db, "tips", id), {
+        upvote: counter,
+        downvote: initialDownvote,
+      });
 
       await updateDoc(doc(db, "users", userId), {
-        tipvote: {upvote: upvoteArray, downvote: downvoteArray}
+        tipvote: { upvote: upvoteArray, downvote: downvoteArray },
       });
     } else {
       navigate("/signin");
@@ -122,11 +123,9 @@ export default function TipPageDetails() {
   };
 
   const handleDownvote = async (e) => {
-    // toggle and send the like status to the db
     let counter = downvote;
     let upvoteArray = vote.upvote;
     let downvoteArray = vote.downvote;
-    //const docRef = doc(db, "tips", id);
 
     if (user) {
       if (!downvoteStatus) {
@@ -146,10 +145,13 @@ export default function TipPageDetails() {
         downvote: downvoteArray,
       }));
       setDownvoteStatus(!downvoteStatus);
-      await updateDoc(doc(db, "tips", id), { downvote: counter });
+      await updateDoc(doc(db, "tips", id), {
+        upvote: initialUpvote,
+        downvote: counter,
+      });
 
       await updateDoc(doc(db, "users", userId), {
-        tipvote: {upvote: upvoteArray, downvote: downvoteArray}
+        tipvote: { upvote: upvoteArray, downvote: downvoteArray },
       });
     } else {
       navigate("/signin");
@@ -167,22 +169,24 @@ export default function TipPageDetails() {
     setEditSaveStatus(!editsavestatus);
   };
 
-  const deleteTip = async(id) => {
+  const deleteTip = async (id) => {
     await deleteDoc(doc(db, "tips", id)); //delete this post from the db called tips
-    if(upvote|| downvote){
+    if (upvote || downvote) {
       let upvoteArray = vote.upvote.filter((item) => item !== id);
       let downvoteArray = vote.downvote.filter((item) => item !== id);
-      
+
       await updateDoc(doc(db, "users", userId), {
-        tipvote:{upvoteArray, downvoteArray}
+        tipvote: { upvoteArray, downvoteArray },
       });
     }
 
-    if(username === authoredBy){
+    if (username === authoredBy) {
       const newuser = await getDoc(doc(db, "users", userId));
-      const tips = newuser.data().tips.filter((item) => !item._key.path.segments.includes(id))
+      const tips = newuser
+        .data()
+        .tips.filter((item) => !item._key.path.segments.includes(id));
       await updateDoc(doc(db, "users", userId), {
-        tips: tips
+        tips: tips,
       });
     }
 
@@ -196,7 +200,13 @@ export default function TipPageDetails() {
   }, [id, navigate, user, loading, editsavestatus]);
 
   return (
-    <div style={{backgroundImage:`url(${img})`, backgroundSize: 'cover', height:'100vh'}}>
+    <div
+      style={{
+        backgroundImage: `url(${img})`,
+        backgroundSize: "cover",
+        height: "100vh",
+      }}
+    >
       <NavBar
         user={user}
         handleSignOut={() => {
@@ -224,9 +234,7 @@ export default function TipPageDetails() {
                             size="xl"
                             style={{
                               cursor:
-                                username === authoredBy
-                                  ? "default"
-                                  : "pointer",
+                                username === authoredBy ? "default" : "pointer",
                             }}
                             onClick={(e) => {
                               if (username !== authoredBy && user) {
@@ -248,9 +256,7 @@ export default function TipPageDetails() {
                             size="xl"
                             style={{
                               cursor:
-                                username === authoredBy
-                                  ? "default"
-                                  : "pointer",
+                                username === authoredBy ? "default" : "pointer",
                             }}
                             onClick={(e) => {
                               if (username !== authoredBy && user) {
@@ -288,24 +294,28 @@ export default function TipPageDetails() {
                             <h3>{title}</h3>
                           )}
                         </Col>
-                        {(username === authoredBy && user) ?<Col xs={2}>
-                          <Card.Link
-                            style={{ cursor: "pointer" }}
-                            onClick={() => {
-                              handleEditSave();
-                            }}
-                          >
-                            {editsavestatus ? "Save" : "Edit"}
-                          </Card.Link>
-                          <Card.Link
-                            style={{ cursor: "pointer" }}
-                            onClick={() => {
-                              deleteTip(id);
-                            }}
-                          >
-                            Delete
-                          </Card.Link>
-                        </Col>: ""}
+                        {username === authoredBy && user ? (
+                          <Col xs={2}>
+                            <Card.Link
+                              style={{ cursor: "pointer" }}
+                              onClick={() => {
+                                handleEditSave();
+                              }}
+                            >
+                              {editsavestatus ? "Save" : "Edit"}
+                            </Card.Link>
+                            <Card.Link
+                              style={{ cursor: "pointer" }}
+                              onClick={() => {
+                                deleteTip(id);
+                              }}
+                            >
+                              Delete
+                            </Card.Link>
+                          </Col>
+                        ) : (
+                          ""
+                        )}
                       </Row>
                       <Row>
                         <Col>
