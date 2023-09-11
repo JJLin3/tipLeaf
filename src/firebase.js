@@ -7,6 +7,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
+  // apiKey: {/*Enter your own apikey*/},
+  // authDomain: {/*Enter your own authDomain*/},
+  // projectId: {/*Enter your own projectId*/},
+  // storageBucket: {/*Enter your own storageBucket*/},
+  // messagingSenderId: {/*Enter your own messagingSenderId*/},
+  // appId: {/*Enter your own appId*/}
+
   apiKey: "AIzaSyAFtSlj51Or5rOgzHcrZMpkmAmFSIXMngU",
   authDomain: "tipleaf-c4072.firebaseapp.com",
   projectId: "tipleaf-c4072",

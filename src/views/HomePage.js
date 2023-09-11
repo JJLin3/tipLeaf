@@ -22,20 +22,30 @@ export default function HomePage() {
   const [searchTip, setSearchTip] = useState("");
   const [searchQuestion, setSearchQuestion] = useState("");
   const [user] = useAuthState(auth);
+  const [tiptitle, setTipTitle] = useState([]);
+  const [questiontitle, setQuestionTitle] = useState([]);
 
   async function getAllTips() {
+    let tiptitle = [];
     const query = await getDocs(collection(db, "tips")); //retrieve data from collection tips
     const tips = query.docs.map((doc) => {
-      return { id: doc.id, ...doc.data() }; // set id with the auto-id and then the image and caption
+      const item = doc.data();
+      tiptitle.push(item.title);
+      return { id: doc.id, ...item };
     });
+    setTipTitle(tiptitle);
     setTips(tips);
   }
 
   async function getAllQuestions() {
+    let questiontitle = [];
     const query = await getDocs(collection(db, "qna")); //retrieve data from collection qna
     const questions = query.docs.map((doc) => {
-      return { id: doc.id, ...doc.data() }; // set id with the auto-id and then the image and caption
+      const item = doc.data();
+      questiontitle.push(item.title);
+      return { id: doc.id, ...item }; 
     });
+    setQuestionTitle(questiontitle);
     setQuestions(questions);
   }
 
@@ -77,24 +87,34 @@ export default function HomePage() {
   };
 
   const handleSearchTip = async (e) => {
+    let newTitle = [];
+
+    newTitle = tiptitle.filter((item) => (item).toLowerCase().includes(searchTip.toLowerCase()));
+
+    console.log('here: '  + JSON.stringify(newTitle) + '\n\n' + JSON.stringify(tiptitle) + "  _  " + searchTip)
+
     const q = await getDocs(
-      query(collection(db, "tips"), where("title", "==", searchTip))
+      query(collection(db, "tips"), where("title", "in", newTitle))
     );
 
     const tips = q.docs.map((doc) => {
-      return { id: doc.id, ...doc.data() }; // set id with the auto-id and then the image and caption
+      return { id: doc.id, ...doc.data() };
     });
 
     setTips(tips);
   };
 
   const handleSearchQuestion = async (e) => {
+    let newTitle = [];
+
+    newTitle = questiontitle.filter((item) => (item).toLowerCase().includes(searchQuestion.toLowerCase()));
+    
     const q = await getDocs(
-      query(collection(db, "qna"), where("title", "==", searchQuestion))
+      query(collection(db, "qna"), where("title", "in", newTitle))
     );
 
     const questions = q.docs.map((doc) => {
-      return { id: doc.id, ...doc.data() }; // set id with the auto-id and then the image and caption
+      return { id: doc.id, ...doc.data() }; 
     });
 
     setQuestions(questions);
@@ -120,7 +140,7 @@ export default function HomePage() {
         <Row className="mt-4">
           <h3>Tips for your plant</h3>
           <Card className="pb-4">
-            {/* <InputGroup className="p-3">
+            <InputGroup className="p-3">
               <Form.Control
                 placeholder="Search for tip here"
                 aria-label="Tips"
@@ -137,7 +157,7 @@ export default function HomePage() {
               >
                 Search
               </Button>
-            </InputGroup> */}
+            </InputGroup>
             <Card.Body style={{ maxHeight: "20rem", overflowY: "auto" }}>
               <TipsRow />
             </Card.Body>
@@ -146,7 +166,7 @@ export default function HomePage() {
         <Row className="mt-4">
           <h3>Questions asked</h3>
           <Card className="mt-4 pb-4">
-          {/* <InputGroup className="p-3">
+          <InputGroup className="p-3">
               <Form.Control
                 placeholder="Search for question here"
                 aria-label="Questions"
@@ -163,7 +183,7 @@ export default function HomePage() {
               >
                 Search
               </Button>
-            </InputGroup> */}
+            </InputGroup>
             <Card.Body style={{ maxHeight: "20rem", overflowY: "auto" }}>
               <QuestionRow />
             </Card.Body>
