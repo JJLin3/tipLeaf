@@ -27,7 +27,7 @@ import {
 } from "firebase/firestore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import NavBar from "../components/NavBar";
-import img from '../assets/background3.jpg'
+import img from "../assets/background3.jpg";
 
 export default function QuestionPage() {
   const [userId, setUserId] = useState("");
@@ -50,8 +50,9 @@ export default function QuestionPage() {
   const [editsavestatus, setEditSaveStatus] = useState(false);
   const [answers, setAnswers] = useState([]);
   const [answerStatus, setAnswerStatus] = useState([]);
-  // const [initansvote, setInitAnsVote] = useState([]);
-  // const [ansvoteStatus, setAnsVoteStatus]= useState([]);
+  const [initansvote, setInitAnsVote] = useState([]);
+  const [ansvoteStatus, setAnsVoteStatus] = useState([]);
+  const [userAnsVoteArray, setUserAnsVoteArray] = useState([]);
 
   async function getQuestion(id, user) {
     const qnaDocument = await getDoc(doc(db, "qna", id)); //get this post from the db called qna
@@ -67,14 +68,14 @@ export default function QuestionPage() {
 
     if (user) {
       // if user is login, retrieve the user info from the db whcih contain user email and array of postId which the user like
-      const q = await getDocs(
+      const userDetails = await getDocs(
         query(
           collection(db, "users"),
           where("email", "==", auth.currentUser.email)
         )
       );
 
-      q.forEach((doc) => {
+      userDetails.forEach((doc) => {
         const item = doc.data();
         setUserId(doc.id);
         setVote(item.questionvote);
@@ -87,11 +88,11 @@ export default function QuestionPage() {
           if (item.questionvote.upvote.includes(id)) {
             setUpvoteStatus(true);
             setDownvoteStatus(false);
-            setInitalUpvote(upvote - 1);
+            setInitalUpvote(question.upvote - 1);
           } else if (item.questionvote.downvote.includes(id)) {
             setUpvoteStatus(false);
             setDownvoteStatus(true);
-            setInitalDownvote(downvote - 1);
+            setInitalDownvote(question.downvote - 1);
           } else {
             setUpvoteStatus(false);
             setDownvoteStatus(false);
@@ -101,12 +102,78 @@ export default function QuestionPage() {
     }
   }
 
-  async function getAnswers() {
+  async function getAnswers(user) {
+    let initvote = [];
+    let voteStatus = [];
     const newAnswers = await getDocs(collection(db, "qna", id, "answers"));
-     const ans = newAnswers.docs.map((doc) => {
+    const ans = newAnswers.docs.map((doc) => {
+      const item = doc.data();
+      initvote.push({ upvote: item.upvote, downvote: item.downvote });
+      voteStatus.push({ upvoteStatus: false, downvoteStatus: false });
       return { id: doc.id, ...doc.data() }; // set id with the auto-id and then the image and caption
     });
+
     setAnswers(ans);
+    setInitAnsVote(initvote);
+    setAnsVoteStatus(voteStatus);
+
+    if (user) {
+      // if user is login, retrieve the user info from the db whcih contain user email and array of postId which the user like
+      const userDetails = await getDocs(
+        query(
+          collection(db, "users"),
+          where("email", "==", auth.currentUser.email)
+        )
+      );
+
+      userDetails.forEach((doc) => {
+        const item = doc.data();
+        let newinitvote = [];
+        let newvoteStatus = [];
+
+        setUserAnsVoteArray(item.answervote);
+
+        ans.forEach((answer, index) => {
+          if (
+            item.answervote.upvote !== undefined &&
+            item.answervote.downvote !== undefined
+          ) {
+            if (item.answervote.upvote.includes(answer.id)) {
+              newvoteStatus.splice(index, 1, {
+                upvoteStatus: true,
+                downvoteStatus: false,
+              });
+              newinitvote.splice(index, 1, {
+                upvote: answer.upvote - 1,
+                downvote: answer.downvote,
+              });
+              setInitAnsVote(newinitvote);
+              setAnsVoteStatus(newvoteStatus);
+            } else if (item.answervote.downvote.includes(answer.id)) {
+              newvoteStatus.splice(index, 1, {
+                upvoteStatus: false,
+                downvoteStatus: true,
+              });
+              newinitvote.splice(index, 1, {
+                upvote: answer.upvote,
+                downvote: answer.downvote - 1,
+              });
+              setInitAnsVote(newinitvote);
+              setAnsVoteStatus(newvoteStatus);
+            } else {
+              newvoteStatus.splice(index, 1, {
+                upvoteStatus: false,
+                downvoteStatus: false,
+              });
+              setAnsVoteStatus(newvoteStatus);
+            }
+          }
+        });
+      });
+    }
+
+    // setInitAnsVote(initvote)
+    // setAnsVoteStatus(voteStatus)
   }
 
   const handleUpvote = async (e) => {
@@ -133,7 +200,10 @@ export default function QuestionPage() {
         upvote: upvoteArray,
       }));
       setUpvoteStatus(!upvoteStatus);
-      await updateDoc(doc(db, "qna", id), { upvote: counter });
+      await updateDoc(doc(db, "qna", id), {
+        upvote: counter,
+        downvote: initialDownvote,
+      });
 
       await updateDoc(doc(db, "users", userId), {
         questionvote: { upvote: upvoteArray, downvote: downvoteArray },
@@ -142,6 +212,16 @@ export default function QuestionPage() {
       navigate("/signin");
     }
   };
+
+  console.log(
+    JSON.stringify(initansvote) +
+      "\n\n" +
+      JSON.stringify(ansvoteStatus) +
+      "\n\n" +
+      JSON.stringify(answers) +
+      "\n\n" +
+      JSON.stringify(userAnsVoteArray)
+  );
 
   const handleDownvote = async (e) => {
     // toggle and send the like status to the db
@@ -168,7 +248,10 @@ export default function QuestionPage() {
         downvote: downvoteArray,
       }));
       setDownvoteStatus(!downvoteStatus);
-      await updateDoc(doc(db, "qna", id), { downvote: counter });
+      await updateDoc(doc(db, "qna", id), {
+        upvote: initialUpvote,
+        downvote: counter,
+      });
 
       await updateDoc(doc(db, "users", userId), {
         questionvote: { upvote: upvoteArray, downvote: downvoteArray },
@@ -218,7 +301,7 @@ export default function QuestionPage() {
     let status = [...answerStatus];
     status[index] = !answerStatus[index];
     setAnswerStatus(status);
-    console.log(ans)
+    console.log(ans);
 
     if (status[index] === false) {
       await updateDoc(doc(db, "qna", id, "answers", ans.id), {
@@ -251,7 +334,7 @@ export default function QuestionPage() {
     let newAnswers = [...answers];
     let newAnswerStatus = [...answerStatus];
     //let ansvoteStatus = [...ansvoteStatus];
-      await addDoc(collection(db, "qna", id, "answers"),{
+    await addDoc(collection(db, "qna", id, "answers"), {
       answer: "",
       authoredby: username,
       downvote: 0,
@@ -265,57 +348,115 @@ export default function QuestionPage() {
       lastauthoredon: null,
       upvote: 0,
     });
-    //wait updateDoc(doc(db, "posts", id), { answers: newAnswers });
+    //await updateDoc(doc(db, "qna", id), { answers: newAnswers });
     newAnswerStatus.push(false);
-    //ansvoteStatus.push({upvote: false, downvote: false})
+    ansvoteStatus.push({upvote: false, downvote: false})
     setAnswers(newAnswers);
     setAnswerStatus(newAnswerStatus);
-    //setAnsVoteStatus(ansvoteStatus)
+    setAnsVoteStatus(ansvoteStatus)
   };
 
-  // const handleCommentDownvote = async(index, answerdownvote, answerupvote) => {
-  //   // toggle and send the like status to the db
-  //   let counter = answerdownvote;
-  //   let upvoteArray = answerupvote;
-  //   let downvoteArray = answerdownvote;
+  const handleAnswerDownvote = async (index, answerdownvote) => {
+    // toggle and send the like status to the db
+    let counter = answerdownvote;
+    let newAnswers = answers;
+    let newAnswerStatus = ansvoteStatus;
+    let upvoteArray = userAnsVoteArray.upvote;
+    let downvoteArray = userAnsVoteArray.downvote;
 
-  //   if (user) {
-  //     if (!ansvoteStatus[index].downvote) {
-  //       counter += 1;
-  //       upvoteArray.splice(answerupvote.indexOf(id), 1);
-  //       downvoteArray.push(id);
-  //     } else {
-  //       counter -= 1;
-  //       downvoteArray.splice(vote.downvote.indexOf(id), 1);
-  //     }
+    console.log(JSON.stringify(upvoteArray))
 
-  //     setDownvote(counter);
-  //     setVote((existingValues) => ({
-  //       // Retain the existing values
-  //       ...existingValues,
-  //       // update downvote array
-  //       downvote: downvoteArray,
-  //     }));
-  //     setDownvoteStatus(!downvoteStatus);
-  //     await updateDoc(doc(db, "qna", id), { downvote: counter });
+    if (user) {
+      if (!ansvoteStatus[index].downvoteStatus) {
+        counter += 1;
+        upvoteArray.splice(userAnsVoteArray.upvote.indexOf(answers[index].id), 1);
+        downvoteArray.push(answers[index].id);
+      } else {
+        counter -= 1;
+        downvoteArray.splice(userAnsVoteArray.downvote.indexOf(answers[index].id), 1);
+      }
 
-  //     await updateDoc(doc(db, "users", userId), {
-  //       questionvote: { upvote: upvoteArray, downvote: downvoteArray },
-  //     });
-  //   } else {
-  //     navigate("/signin");
-  //   }
-  // }
+      newAnswers[index].downvote = counter;
+      newAnswerStatus[index].downvoteStatus = !newAnswerStatus[index].downvoteStatus;
+
+      setAnswers(newAnswers);
+      setUserAnsVoteArray((existingValues) => ({
+        // Retain the existing values
+        ...existingValues,
+        //update downvote array
+        downvote: downvoteArray,
+      }));
+      setAnsVoteStatus(newAnswerStatus);
+      await updateDoc(doc(db, "qna", id, "answers", answers[index].id), {
+        downvote: counter, upvote: initansvote[index].upvote
+      });
+
+      await updateDoc(doc(db, "users", userId), {
+        answervote: { upvote: upvoteArray, downvote: downvoteArray },
+      });
+    } else {
+      navigate("/signin");
+    }
+  };
+
+  const handleAnswerUpvote = async (index, answerupvote) => {
+    // toggle and send the like status to the db
+    let counter = answerupvote;
+    let newAnswers = answers;
+    let newAnswerStatus = ansvoteStatus;
+    let upvoteArray = userAnsVoteArray.upvote;
+    let downvoteArray = userAnsVoteArray.downvote;
+
+    console.log(JSON.stringify(upvoteArray))
+
+    if (user) {
+      if (!ansvoteStatus[index].upvoteStatus) {
+        counter += 1;
+        downvoteArray.splice(userAnsVoteArray.downvote.indexOf(answers[index].id), 1);
+        upvoteArray.push(answers[index].id);
+      } else {
+        counter -= 1;
+        upvoteArray.splice(userAnsVoteArray.upvote.indexOf(answers[index].id), 1);
+      }
+
+      newAnswers[index].upvote = counter;
+      newAnswerStatus[index].upvoteStatus = !ansvoteStatus[index].upvoteStatus;
+
+      setAnswers(newAnswers);
+      setUserAnsVoteArray((existingValues) => ({
+        // Retain the existing values
+        ...existingValues,
+        //update downvote array
+        upvote: upvoteArray,
+      }));
+      setAnsVoteStatus(newAnswerStatus);
+      await updateDoc(doc(db, "qna", id, "answers", answers[index].id), {
+        upvote: counter, downvote: initansvote[index].downvote
+      });
+
+      await updateDoc(doc(db, "users", userId), {
+        answervote: { upvote: upvoteArray, downvote: downvoteArray },
+      });
+    } else {
+      navigate("/signin");
+    }
+  };
 
   useEffect(() => {
     if (loading) return;
     //if (!user) navigate("/signin");
     getQuestion(id, user);
-    getAnswers();
+    getAnswers(user);
   }, [id, navigate, user, loading, editsavestatus, answerStatus]);
 
   return (
-    <div style={{backgroundImage:`url(${img})`, backgroundSize: 'cover', height:'100vh'}}>
+    <div
+      style={{
+        backgroundImage: `url(${img})`,
+        backgroundSize: "cover",
+        height: "100vh",
+      }}
+    >
       <NavBar
         user={user}
         handleSignOut={() => {
@@ -468,129 +609,160 @@ export default function QuestionPage() {
         <Row className="mt-4 px-3">
           <Card>
             <Card.Title>Answer</Card.Title>
-            <Card.Body style={{maxHeight:'35rem', overflowY:'auto'}}>
+            <Card.Body style={{ maxHeight: "35rem", overflowY: "auto" }}>
               <ListGroup style={{ paddingTop: "10px" }}>
                 {answers.map((item, index) => (
                   <ListGroupItem key={index}>
                     <Container>
                       <Row>
                         <Col xs="auto" className="text-center">
-                        {/* {user ? (
-                        <div
-                          style={{ display: "flex", flexDirection: "column" }}
-                        >
-                          <FontAwesomeIcon
-                            icon={
-                              ansvoteStatus[index].upvote
-                                ? "fa-solid fa-arrow-alt-circle-up"
-                                : "fa-regular fa-arrow-alt-circle-up"
-                            }
-                            size="xl"
-                            style={{
-                              cursor:
-                                username === item.authoredby ? "default" : "pointer",
-                            }}
-                            onClick={(e) => {
-                              if (username !== item.authoredby && user) {
-                                if (ansvoteStatus[index].downvote) {
-                                  setDownvoteStatus(!downvoteStatus);
-                                  setDownvote(initialDownvote);
+                          {user ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                              }}
+                            >
+                              <FontAwesomeIcon
+                                icon={
+                                  ansvoteStatus[index].upvoteStatus
+                                    ? "fa-solid fa-arrow-alt-circle-up"
+                                    : "fa-regular fa-arrow-alt-circle-up"
                                 }
-                                handleUpvote(e);
-                              }
-                            }}
-                          />
-                          {upvote - downvote}
-                          <FontAwesomeIcon
-                            icon={
-                              ansvoteStatus[index].downvote
-                                ? "fa-solid fa-arrow-alt-circle-down"
-                                : "fa-regular fa-arrow-alt-circle-down"
-                            }
-                            size="xl"
-                            style={{
-                              cursor:
-                                username === item.authoredby ? "default" : "pointer",
-                            }}
-                            onClick={(e) => {
-                              if (username !== item.authoredby && user) {
-                                handleCommentDownvote(index, item.downvote, item.upvote)
-                              }
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        ""
-                      )} */}
+                                size="xl"
+                                style={{
+                                  cursor:
+                                    username === item.authoredby
+                                      ? "default"
+                                      : "pointer",
+                                }}
+                                onClick={(e) => {
+                                  if (username !== item.authoredby && user) {
+                                    if (ansvoteStatus[index].downvoteStatus) {
+                                      let newvoteStatus = ansvoteStatus;
+                                      let newAnswers = answers;
+                                      newvoteStatus[index].downvoteStatus = !ansvoteStatus[index].downvoteStatus;
+                                      newAnswers[index].downvote = initansvote[index].downvote;                                    
+                                      setAnsVoteStatus(newvoteStatus);
+                                      setAnswers(newAnswers);
+                                    }
+                                    handleAnswerUpvote(index,
+                                      item.upvote);
+                                  }
+                                }}
+                              />
+                              {item.upvote - item.downvote}
+                              <FontAwesomeIcon
+                                icon={
+                                  ansvoteStatus[index].downvoteStatus
+                                    ? "fa-solid fa-arrow-alt-circle-down"
+                                    : "fa-regular fa-arrow-alt-circle-down"
+                                }
+                                size="xl"
+                                style={{
+                                  cursor:
+                                    username === item.authoredby
+                                      ? "default"
+                                      : "pointer",
+                                }}
+                                onClick={(e) => {
+                                  if (username !== item.authoredby && user) {
+                                    if (ansvoteStatus[index].upvoteStatus) {
+                                      let newvoteStatus = ansvoteStatus;
+                                      let newAnswers = answers;
+                                      newvoteStatus[index].upvoteStatus = !ansvoteStatus[index].upvoteStatus;
+                                      newAnswers[index].upvote = initansvote[index].upvote;
+                                      setAnsVoteStatus(newvoteStatus);
+                                      setAnswers(newAnswers);
+                                    }
+                                    handleAnswerDownvote(
+                                      index,
+                                      item.downvote
+                                    );
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            ""
+                          )}
                         </Col>
                         <Col>
-                        {!answerStatus[index] ? (
-                      <p>{item.answer}</p>
-                    ) : (
-                      <Form>
-                        <Form.Group className="mb-3" controlId="answer">
-                          <Form.Label>Answer</Form.Label>
-                          <Form.Control
-                            as="textarea"
-                            rows={10}
-                            value={answers[index].answer}
-                            onChange={(text) => {
-                              let newAnswers = [...answers];
-                              newAnswers[index].answer = text.target.value;
-                              setAnswers(newAnswers);
-                            }}
-                          />
-                        </Form.Group>
-                      </Form>
-                    )}
+                          {!answerStatus[index] ? (
+                            <p>{item.answer}</p>
+                          ) : (
+                            <Form>
+                              <Form.Group className="mb-3" controlId="answer">
+                                <Form.Label>Answer</Form.Label>
+                                <Form.Control
+                                  as="textarea"
+                                  rows={10}
+                                  value={answers[index].answer}
+                                  onChange={(text) => {
+                                    let newAnswers = [...answers];
+                                    newAnswers[index].answer =
+                                      text.target.value;
+                                    setAnswers(newAnswers);
+                                  }}
+                                />
+                              </Form.Group>
+                            </Form>
+                          )}
                         </Col>
                         <Col xs={2} className="text-center">
-                        {username === item.authoredby && user ? (
-                      <>
-                        <Card.Link
-                          style={{ cursor: "pointer" }}
-                          onClick={() => toggleAnswer(index)}
-                        >
-                          Edit
-                        </Card.Link>
-                        <Card.Link
-                          style={{ cursor: "pointer" }}
-                          onClick={() => {
-                            handleDeleteAnswer(index);
-                          }}
-                        >
-                          Delete
-                        </Card.Link>
-                      </>
-                    ) : (
-                      ""
-                    )}
+                          {username === item.authoredby && user ? (
+                            <>
+                              <Card.Link
+                                style={{ cursor: "pointer" }}
+                                onClick={() => toggleAnswer(index)}
+                              >
+                                {answerStatus[index] ? "Save" : "Edit"}
+                              </Card.Link>
+                              <Card.Link
+                                style={{ cursor: "pointer" }}
+                                onClick={() => {
+                                  handleDeleteAnswer(index);
+                                }}
+                              >
+                                Delete
+                              </Card.Link>
+                            </>
+                          ) : (
+                            ""
+                          )}
                         </Col>
                         <Col xs={2} className="text-center">
-                        <p>
-                        <strong>Authored By</strong>
-                        {`: ${answers[index].authoredby}`}
-                      </p>
-                      <p>
-                        <strong>Last Authored On</strong>
-                        {answers[index].lastauthoredon ?  `: ${answers[index].lastauthoredon.toDate().toLocaleString()}` : ""}
-                      </p>
+                          <p>
+                            <strong>Authored By</strong>
+                            {`: ${answers[index].authoredby}`}
+                          </p>
+                          <p>
+                            <strong>Last Authored On</strong>
+                            {answers[index].lastauthoredon
+                              ? `: ${answers[index].lastauthoredon
+                                  .toDate()
+                                  .toLocaleString()}`
+                              : ""}
+                          </p>
                         </Col>
                       </Row>
                     </Container>
                   </ListGroupItem>
                 ))}
-                {user ?
-                <Button
-                className="mt-2"
-                onClick={() => {
-                  if(user){
-                    handleAddAnswer();
-                  }
-                }}
-              >
-                Add
-              </Button> :""}
+                {user ? (
+                  <Button
+                    className="mt-2"
+                    onClick={() => {
+                      if (user) {
+                        handleAddAnswer();
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                ) : (
+                  ""
+                )}
               </ListGroup>
             </Card.Body>
           </Card>
