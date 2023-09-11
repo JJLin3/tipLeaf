@@ -20,7 +20,7 @@ export default function SignUp() {
     if (canSignUp) {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        await addDoc(collection(db, "users"), {username: username, questionvote: {upvote:[], downvote: []}, tipvote: {upvote:[], downvote: []}, email: email, tips: [], questions: []})
+        await addDoc(collection(db, "users"), {username: username, questionvote: {upvote:[], downvote: []}, answervote: {upvote:[], downvote: []}, tipvote: {upvote:[], downvote: []}, email: email, tips: [], questions: []})
         navigate("/");
       } catch (error) {
         setError(error.message);
