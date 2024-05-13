@@ -13,13 +13,6 @@ const firebaseConfig = {
   // storageBucket: {/*Enter your own storageBucket*/},
   // messagingSenderId: {/*Enter your own messagingSenderId*/},
   // appId: {/*Enter your own appId*/}
-
-  apiKey: "AIzaSyAFtSlj51Or5rOgzHcrZMpkmAmFSIXMngU",
-  authDomain: "tipleaf-c4072.firebaseapp.com",
-  projectId: "tipleaf-c4072",
-  storageBucket: "tipleaf-c4072.appspot.com",
-  messagingSenderId: "1046264565776",
-  appId: "1:1046264565776:web:fffb9b33c6193a36c43a95"
 };
 
 // Initialize Firebase
